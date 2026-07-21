@@ -18,4 +18,14 @@ describe('defaultProject', () => {
             });
         });
     });
+
+    test('new projects start with an empty code workspace', () => {
+        const defaultProject = defaultProjectGenerator();
+        const projectData = JSON.parse(defaultProject[0].data);
+        const stageBlocks = projectData.targets.find(target => target.isStage).blocks;
+        const spriteBlocks = projectData.targets.find(target => !target.isStage).blocks;
+
+        expect(Object.keys(stageBlocks)).toHaveLength(0);
+        expect(Object.keys(spriteBlocks)).toHaveLength(0);
+    });
 });

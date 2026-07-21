@@ -317,6 +317,7 @@ class MenuBar extends React.Component {
 
         return (
             <Box
+                id={this.props.id}
                 className={classNames(
                     this.props.className,
                     styles.menuBar
@@ -324,6 +325,7 @@ class MenuBar extends React.Component {
                 aria-label={this.props.ariaLabel}
                 role={this.props.ariaRole}
                 element="header"
+                tabIndex={this.props.tabIndex}
             >
                 <div className={styles.mainMenu}>
                     <div className={styles.fileGroup}>
@@ -662,6 +664,7 @@ MenuBar.propTypes = {
     currentLocale: PropTypes.string.isRequired,
     enableCommunity: PropTypes.bool,
     hasActiveMembership: PropTypes.bool,
+    id: PropTypes.string,
     intl: intlShape,
     isRtl: PropTypes.bool,
     isShared: PropTypes.bool,
@@ -708,6 +711,7 @@ MenuBar.propTypes = {
     renderLogin: PropTypes.func,
     shouldSaveBeforeTransition: PropTypes.func,
     showComingSoon: PropTypes.bool,
+    tabIndex: PropTypes.string,
     username: PropTypes.string,
     avatarBadge: PropTypes.number,
     userOwnsProject: PropTypes.bool,

@@ -150,3 +150,39 @@ Review all changes and confirm:
 - **Build passes**: `npm run build` (or `npm run build` in the affected package) completes successfully.
 - **Tests pass**: `npm test` (or `npm test` in the affected package) completes with no failures.
 - **No lint errors**: `npm run test:lint` (or `npm run lint`) passes in the affected package.
+
+
+# Project overview
+
+This is a customized version of the Scratch editor designed primarily
+for children aged 5–6 who may not yet be able to read.
+
+## Main objectives
+
+1. Add audio pronunciation for Scratch blocks.
+2. Allow users to hear a block name by hovering, selecting, or pressing
+   an audio button.
+3. Add simple spoken explanations for individual blocks.
+4. Add an AI assistant capable of:
+   - explaining a script or group of blocks;
+   - identifying likely programming mistakes;
+   - giving child-friendly troubleshooting guidance;
+   - responding using short and simple language.
+
+## Technical constraints
+
+- Keep AI functionality separated from core Scratch logic.
+- Never expose API keys in frontend code.
+- Prefer a backend proxy for AI requests.
+- Audio features should work independently of the AI assistant.
+- Maintain accessibility for keyboard and touch users.
+
+## Development workflow
+
+Before making major changes:
+
+1. Identify the relevant package in the monorepo.
+2. Explain the proposed architecture.
+3. Make changes in small commits.
+4. Run available lint, test, and build commands.
+5. Report modified files and any unresolved issues.

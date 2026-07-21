@@ -1,9 +1,66 @@
 import * as ScratchBlocks from 'scratch-blocks';
 import {defaultColors} from './settings/color-mode';
+import {SPECIALISED_BLOCK_CATEGORY_ID, SPECIALISED_BLOCK_CATEGORY_NAME, SPECIALISED_BLOCKS} from './specialised-blocks';
+import {STARTER_BLOCK_CATEGORY_ID, STARTER_BLOCK_CATEGORY_NAME, STARTER_BLOCKS} from './starter-blocks';
 
 const categorySeparator = '<sep gap="36"/>';
 
 const blockSeparator = '<sep gap="36"/>'; // At default scale, about 28px
+
+const categoryIconSvg = {
+    motion: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M6 16h17" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>' +
+        '<path d="M17 8l8 8-8 8" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round" ' +
+        'stroke-linejoin="round"/></svg>',
+    looks: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16z" fill="none" stroke="#222" ' +
+        'stroke-width="3" stroke-linejoin="round"/><circle cx="16" cy="16" r="4" fill="#222"/></svg>',
+    sound: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M5 20h6l8 6V6l-8 6H5z" fill="none" stroke="#222" stroke-width="3" ' +
+        'stroke-linejoin="round"/><path d="M23 11c2 3 2 7 0 10" fill="none" stroke="#222" ' +
+        'stroke-width="3" stroke-linecap="round"/></svg>',
+    events: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M8 27V5" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>' +
+        '<path d="M9 6h16l-4 5 4 5H9z" fill="none" stroke="#222" stroke-width="3" ' +
+        'stroke-linejoin="round"/></svg>',
+    control: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M16 5v7m0 0l-7 7m7-7l7 7M9 19v8m14-8v8" fill="none" stroke="#222" ' +
+        'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="12" r="3" ' +
+        'fill="#222"/><circle cx="9" cy="27" r="2.5" fill="#222"/><circle cx="23" cy="27" r="2.5" ' +
+        'fill="#222"/></svg>',
+    sensing: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<circle cx="16" cy="16" r="3" fill="#222"/><circle cx="16" cy="16" r="8" fill="none" ' +
+        'stroke="#222" stroke-width="3"/><path d="M16 3v4M16 25v4M3 16h4M25 16h4" fill="none" ' +
+        'stroke="#222" stroke-width="3" stroke-linecap="round"/></svg>',
+    operators: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M8 10h8M12 6v8M18 22h8M18 18h8" fill="none" stroke="#222" stroke-width="3" ' +
+        'stroke-linecap="round"/></svg>',
+    variables: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M6 11l10-5 10 5v12l-10 5-10-5z" fill="none" stroke="#222" stroke-width="3" ' +
+        'stroke-linejoin="round"/><path d="M6 11l10 5 10-5M16 16v12" fill="none" stroke="#222" ' +
+        'stroke-width="3" stroke-linejoin="round"/></svg>',
+    myBlocks: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M10 7h12v6h3a3 3 0 010 6h-3v6H10v-6H7a3 3 0 010-6h3z" fill="none" ' +
+        'stroke="#222" stroke-width="3" stroke-linejoin="round"/></svg>',
+    starter: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<path d="M16 5l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="none" stroke="#222" ' +
+        'stroke-width="3" stroke-linejoin="round"/></svg>',
+    specialised: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<circle cx="16" cy="16" r="4" fill="#222"/><path d="M16 4v5M16 23v5M4 16h5M23 16h5" ' +
+        'fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/><path d="M8 8l4 4M20 20l4 4' +
+        'M24 8l-4 4M12 20l-4 4" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/></svg>'
+};
+
+const categoryIconURI = (id, backgroundColor) => {
+    const svg = categoryIconSvg[id]
+        .replace('<svg ', '<svg ')
+        .replace('viewBox="0 0 32 32">', `viewBox="0 0 32 32"><rect width="32" height="32" rx="7" ` +
+            `fill="${backgroundColor}"/>`)
+        .replace(/#222/g, '#fff');
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
+
+const categoryIconAttribute = (id, backgroundColor) => `iconURI="${categoryIconURI(id, backgroundColor)}"`;
 
 
 const motion = function (isInitialSetup, isStage, targetId, colors) {
@@ -19,7 +76,7 @@ const motion = function (isInitialSetup, isStage, targetId, colors) {
         'Motion'
     )}" toolboxitemid="motion" colour="${
         colors.colourPrimary
-    }" secondaryColour="${colors.colourTertiary}">
+    }" secondaryColour="${colors.colourTertiary}" ${categoryIconAttribute('motion', colors.colourPrimary)}>
         ${isStage ? `
         <label text="${stageSelected}"></label>
         ` : `
@@ -169,7 +226,7 @@ const looks = function (isInitialSetup, isStage, targetId, costumeName, backdrop
         'Looks'
     )}" toolboxitemid="looks" colour="${
         colors.colourPrimary
-    }" secondaryColour="${colors.colourTertiary}">
+    }" secondaryColour="${colors.colourTertiary}" ${categoryIconAttribute('looks', colors.colourPrimary)}>
         ${isStage ? '' : `
         <block type="looks_sayforsecs">
             <value name="MESSAGE">
@@ -310,7 +367,7 @@ const sound = function (isInitialSetup, isStage, targetId, soundName, colors) {
         'Sound'
     )}" toolboxitemid="sound" colour="${
         colors.colourPrimary
-    }" secondaryColour="${colors.colourTertiary}">
+    }" secondaryColour="${colors.colourTertiary}" ${categoryIconAttribute('sound', colors.colourPrimary)}>
         <block id="${targetId}_sound_playuntildone" type="sound_playuntildone">
             <value name="SOUND_MENU">
                 <shadow type="sound_sounds_menu">
@@ -371,7 +428,7 @@ const events = function (isInitialSetup, isStage, targetId, colors) {
         'Events'
     )}" toolboxitemid="events" colour="${
         colors.colourPrimary
-    }" secondaryColour="${colors.colourTertiary}">
+    }" secondaryColour="${colors.colourTertiary}" ${categoryIconAttribute('events', colors.colourPrimary)}>
         <block type="event_whenflagclicked"/>
         <block type="event_whenkeypressed">
         </block>
@@ -418,7 +475,8 @@ const control = function (isInitialSetup, isStage, targetId, colors) {
         )}"
         toolboxitemid="control"
         colour="${colors.colourPrimary}"
-        secondaryColour="${colors.colourTertiary}">
+        secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('control', colors.colourPrimary)}>
         <block type="control_wait">
             <value name="DURATION">
                 <shadow type="math_positive_number">
@@ -474,7 +532,8 @@ const sensing = function (isInitialSetup, isStage, targetId, colors) {
         )}"
         toolboxitemid="sensing"
         colour="${colors.colourPrimary}"
-        secondaryColour="${colors.colourTertiary}">
+        secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('sensing', colors.colourPrimary)}>
         ${isStage ? '' : `
             <block type="sensing_touchingobject">
                 <value name="TOUCHINGOBJECTMENU">
@@ -560,7 +619,8 @@ const operators = function (isInitialSetup, isStage, targetId, colors) {
         )}"
         toolboxitemid="operators"
         colour="${colors.colourPrimary}"
-        secondaryColour="${colors.colourTertiary}">
+        secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('operators', colors.colourPrimary)}>
         <block type="operator_add">
             <value name="NUM1">
                 <shadow type="math_number">
@@ -753,6 +813,7 @@ const variables = function (isInitialSetup, isStage, targetId, colors) {
         toolboxitemid="variables"
         colour="${colors.colourPrimary}"
         secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('variables', colors.colourPrimary)}
         custom="VARIABLE">
     </category>
     `;
@@ -769,7 +830,62 @@ const myBlocks = function (isInitialSetup, isStage, targetId, colors) {
         toolboxitemid="myBlocks"
         colour="${colors.colourPrimary}"
         secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('myBlocks', colors.colourPrimary)}
         custom="PROCEDURE">
+    </category>
+    `;
+};
+
+const makeTeachingBlocksXML = function (blocks) {
+    return blocks.map(block => {
+        const values = (block.inputs || []).map(input => `
+            <value name="${input.name}">
+                <shadow type="${input.type}">
+                    <field name="${input.type === 'text' ? 'TEXT' : 'NUM'}">${xmlEscape(input.defaultValue)}</field>
+                </shadow>
+            </value>
+        `).join('');
+        return `
+        <block type="${block.opcode}">
+            ${values}
+        </block>`;
+    }).join('\n');
+};
+
+const starter = function (isStage, colors) {
+    if (isStage) return '';
+    const starterBlocksXML = makeTeachingBlocksXML(STARTER_BLOCKS);
+    return `
+    <category
+        name="${ScratchBlocks.ScratchMsgs.translate(
+            'CATEGORY_STARTER',
+            STARTER_BLOCK_CATEGORY_NAME
+        )}"
+        toolboxitemid="${STARTER_BLOCK_CATEGORY_ID}"
+        colour="${colors.colourPrimary}"
+        secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('starter', colors.colourPrimary)}>
+        ${starterBlocksXML}
+        ${categorySeparator}
+    </category>
+    `;
+};
+
+const specialised = function (isStage, colors) {
+    if (isStage) return '';
+    const specialisedBlocksXML = makeTeachingBlocksXML(SPECIALISED_BLOCKS);
+    return `
+    <category
+        name="${ScratchBlocks.ScratchMsgs.translate(
+            'CATEGORY_SPECIALISED',
+            SPECIALISED_BLOCK_CATEGORY_NAME
+        )}"
+        toolboxitemid="${SPECIALISED_BLOCK_CATEGORY_ID}"
+        colour="${colors.colourPrimary}"
+        secondaryColour="${colors.colourTertiary}"
+        ${categoryIconAttribute('specialised', colors.colourPrimary)}>
+        ${specialisedBlocksXML}
+        ${categorySeparator}
     </category>
     `;
 };
@@ -823,6 +939,8 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     const operatorsXML = moveCategory('operators') || operators(isInitialSetup, isStage, targetId, colors.operators);
     const variablesXML = moveCategory('data') || variables(isInitialSetup, isStage, targetId, colors.data);
     const myBlocksXML = moveCategory('procedures') || myBlocks(isInitialSetup, isStage, targetId, colors.more);
+    const starterXML = starter(isStage, colors.more);
+    const specialisedXML = specialised(isStage, colors.more);
 
     const everything = [
         xmlOpen,
@@ -834,7 +952,9 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
         sensingXML, gap,
         operatorsXML, gap,
         variablesXML, gap,
-        myBlocksXML
+        myBlocksXML, gap,
+        starterXML, gap,
+        specialisedXML
     ];
 
     for (const extensionCategory of categoriesXML) {

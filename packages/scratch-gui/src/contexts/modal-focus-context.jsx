@@ -17,16 +17,29 @@ export const ModalFocusContext = createContext(null);
  */
 export const ModalFocusProvider = ({children}) => {
     const lastFocusedElement = useRef(null);
+    const fallbackFocusSelector = useRef(null);
 
-    const captureFocus = useCallback(() => {
+    const captureFocus = useCallback((fallbackSelector = null) => {
         lastFocusedElement.current = document.activeElement;
+        fallbackFocusSelector.current = fallbackSelector;
     }, []);
 
     const restoreFocus = useCallback(() => {
         if (lastFocusedElement.current?.isConnected) {
             lastFocusedElement.current.focus();
             lastFocusedElement.current = null;
+            fallbackFocusSelector.current = null;
+            return;
         }
+
+        const fallbackElement = fallbackFocusSelector.current ?
+            document.querySelector(fallbackFocusSelector.current) :
+            null;
+        if (fallbackElement) {
+            fallbackElement.focus();
+        }
+        lastFocusedElement.current = null;
+        fallbackFocusSelector.current = null;
     }, []);
 
     const value = useMemo(

@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import omit from 'lodash.omit';
 import PropTypes from 'prop-types';
-import React, {useEffect, useCallback} from 'react';
+import React, {useEffect, useCallback, useState} from 'react';
 import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
 import {connect} from 'react-redux';
 import MediaQuery from 'react-responsive';
@@ -18,6 +18,7 @@ import StageWrapper from '../../containers/stage-wrapper.jsx';
 import Loader from '../loader/loader.jsx';
 import Box from '../box/box.jsx';
 import MenuBar from '../menu-bar/menu-bar.jsx';
+import AccessibilityShell from '../accessibility-shell/accessibility-shell.jsx';
 import CostumeLibrary from '../../containers/costume-library.jsx';
 import BackdropLibrary from '../../containers/backdrop-library.jsx';
 import Watermark from '../../containers/watermark.jsx';
@@ -37,6 +38,11 @@ import {resolveStageSize} from '../../lib/screen-utils';
 import {colorModeMap} from '../../lib/settings/color-mode/index.js';
 import {DEFAULT_THEME, themeMap} from '../../lib/settings/theme/index.js';
 import {AccountMenuOptionsPropTypes} from '../../lib/account-menu-options';
+import {
+    BLOCK_AUDIO_HOVER_DELAY_MS,
+    BLOCK_SIZE_SCALE,
+    setTheme
+} from '../../reducers/settings.js';
 
 import styles from './gui.css';
 import codeIcon from './icon--code.svg';
@@ -44,7 +50,6 @@ import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
 import {setPlatform} from '../../reducers/platform.js';
-import {setTheme} from '../../reducers/settings.js';
 import {PLATFORM} from '../../lib/platform.js';
 import {MenuRefProvider} from '../../contexts/menu-ref-context.jsx';
 import {ModalFocusProvider} from '../../contexts/modal-focus-context.jsx';
@@ -107,12 +112,39 @@ const ariaMessages = defineMessages({
     }
 });
 
+const welcomeMessages = defineMessages({
+    title: {
+        id: 'gui.welcome.title',
+        defaultMessage: 'Scratch BrightBlocks',
+        description: 'Title for the Scratch BrightBlocks starting screen'
+    },
+    description: {
+        id: 'gui.welcome.description',
+        defaultMessage: 'A Scratch editor that helps young, pre-reading, blind, and visually impaired learners ' +
+            'understand programming blocks through audio, visual categories, and AI-powered code explanations.',
+        description: 'Description for the Scratch BrightBlocks starting screen'
+    },
+    startDemo: {
+        id: 'gui.welcome.startDemo',
+        defaultMessage: 'Start Demo',
+        description: 'Button on the starting screen that opens the editor'
+    },
+    watchVideo: {
+        id: 'gui.welcome.watchVideo',
+        defaultMessage: 'Watch the Video',
+        description: 'Link on the starting screen that opens the demo video'
+    }
+});
+
+const DEMO_VIDEO_URL = 'https://youtu.be/LkIUPeSGa0Q';
+
 // Cache this value to only retrieve it once the first time.
 // Assume that it doesn't change for a session.
 let isRendererSupported = null;
 
 const GUIComponent = props => {
     const intl = useIntl();
+    const [welcomeVisible, setWelcomeVisible] = useState(true);
     const {
         accountMenuOptions,
         activeTabIndex,
@@ -196,8 +228,12 @@ const GUIComponent = props => {
         stageSizeMode,
         targetIsStage,
         telemetryModalVisible,
+        blockAudioHoverDelayMs,
+        blockSize,
+        blockSizeScale,
         colorMode,
         theme,
+        visionImpairedMode,
         tipsLibraryVisible,
         useExternalPeripheralList,
         username,
@@ -271,10 +307,45 @@ const GUIComponent = props => {
         ) : (
             <ModalFocusProvider>
                 <Box
-                    className={styles.pageWrapper}
+                    className={classNames(styles.pageWrapper, {
+                        [styles.visionImpairedMode]: visionImpairedMode
+                    })}
                     dir={isRtl ? 'rtl' : 'ltr'}
                     {...componentProps}
                 >
+                    <AccessibilityShell enabled={visionImpairedMode} />
+                    {welcomeVisible ? (
+                        <Box
+                            className={styles.welcomeScreen}
+                            dir={isRtl ? 'rtl' : 'ltr'}
+                        >
+                            <main className={styles.welcomeContent}>
+                                <h1 className={styles.welcomeTitle}>
+                                    {intl.formatMessage(welcomeMessages.title)}
+                                </h1>
+                                <p className={styles.welcomeDescription}>
+                                    {intl.formatMessage(welcomeMessages.description)}
+                                </p>
+                                <div className={styles.welcomeActions}>
+                                    <button
+                                        className={styles.welcomePrimaryButton}
+                                        type="button"
+                                        onClick={() => setWelcomeVisible(false)}
+                                    >
+                                        {intl.formatMessage(welcomeMessages.startDemo)}
+                                    </button>
+                                    <a
+                                        className={styles.welcomeSecondaryButton}
+                                        href={DEMO_VIDEO_URL}
+                                        rel="noreferrer"
+                                        target="_blank"
+                                    >
+                                        {intl.formatMessage(welcomeMessages.watchVideo)}
+                                    </a>
+                                </div>
+                            </main>
+                        </Box>
+                    ) : null}
                     {telemetryModalVisible ? (
                         <TelemetryModal
                             isRtl={isRtl}
@@ -333,8 +404,10 @@ const GUIComponent = props => {
                     make sure to move it from tests as well */}
                     {!menuBarHidden && <MenuRefProvider>
                         <MenuBar
+                            id="scratch-menu-bar"
                             ariaRole="banner"
                             ariaLabel={intl.formatMessage(ariaMessages.menuBar)}
+                            tabIndex="-1"
                             authorId={authorId}
                             authorThumbnailUrl={authorThumbnailUrl}
                             authorUsername={authorUsername}
@@ -469,23 +542,32 @@ const GUIComponent = props => {
                                     role="tabpanel"
                                 >
                                     <Box
+                                        id="scratch-code-panel"
                                         className={styles.blocksWrapper}
                                         role="region"
                                         aria-label={intl.formatMessage(ariaMessages.codePanel)}
                                         element="section"
+                                        tabIndex="-1"
                                     >
                                         <Blocks
-                                            key={`${blocksId}/${colorMode}/${theme}`}
+                                            key={`${blocksId}/${colorMode}/${theme}/${blockSize}`}
+                                            blockAudioHoverDelayMs={blockAudioHoverDelayMs}
+                                            blockSize={blockSize}
                                             canUseCloud={canUseCloud}
                                             grow={1}
                                             isVisible={blocksTabVisible}
                                             options={{
-                                                media: `${basePath}static/${colorModeMap[colorMode].blocksMediaFolder}/`
+                                                media: `${basePath}static/` +
+                                                    `${colorModeMap[colorMode].blocksMediaFolder}/`,
+                                                zoom: {
+                                                    startScale: blockSizeScale
+                                                }
                                             }}
                                             stageSize={stageSize}
                                             theme={theme}
                                             vm={vm}
                                             colorMode={colorMode}
+                                            visionImpairedMode={visionImpairedMode}
                                         />
                                     </Box>
                                     <ExtensionsButton
@@ -531,10 +613,12 @@ const GUIComponent = props => {
                         </Box>
 
                         <Box
+                            id="scratch-stage-panel"
                             role="complementary"
                             aria-label={intl.formatMessage(ariaMessages.stageAndTarget)}
                             className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}
                             element="aside"
+                            tabIndex="-1"
                         >
                             <StageWrapper
                                 isFullScreen={isFullScreen}
@@ -555,10 +639,12 @@ const GUIComponent = props => {
                                 onUpdateProjectThumbnail={onUpdateProjectThumbnail}
                             />
                             <Box
+                                id="scratch-target-pane"
                                 className={styles.targetWrapper}
                                 role="region"
                                 aria-label={intl.formatMessage(ariaMessages.targetPane)}
                                 element="section"
+                                tabIndex="-1"
                             >
                                 <TargetPane
                                     stageSize={stageSize}
@@ -657,8 +743,12 @@ GUIComponent.propTypes = {
     setPlatform: PropTypes.func,
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
+    blockAudioHoverDelayMs: PropTypes.number,
+    blockSize: PropTypes.string,
+    blockSizeScale: PropTypes.number,
     colorMode: PropTypes.string,
     theme: PropTypes.string,
+    visionImpairedMode: PropTypes.bool,
     tipsLibraryVisible: PropTypes.bool,
     useExternalPeripheralList: PropTypes.bool, // true for CDM, false for normal Scratch Link
     username: PropTypes.string,
@@ -700,8 +790,12 @@ const mapStateToProps = state => ({
     // This is the button's mode, as opposed to the actual current state
     blocksId: state.scratchGui.timeTravel.year.toString(),
     stageSizeMode: state.scratchGui.stageSize.stageSize,
+    blockAudioHoverDelayMs: BLOCK_AUDIO_HOVER_DELAY_MS[state.scratchGui.settings.blockAudioHoverDelay],
+    blockSize: state.scratchGui.settings.blockSize,
+    blockSizeScale: BLOCK_SIZE_SCALE[state.scratchGui.settings.blockSize],
     colorMode: state.scratchGui.settings.colorMode,
     theme: state.scratchGui.settings.theme,
+    visionImpairedMode: state.scratchGui.settings.visionImpairedMode,
     backpackConfigured: !!state.scratchGui.config.storage?.backpackStorage
 });
 

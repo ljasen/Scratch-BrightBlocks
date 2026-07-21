@@ -8,6 +8,10 @@ import VMScratchBlocks from '../lib/blocks';
 import VM from '@scratch/scratch-vm';
 
 import analytics from '../lib/analytics';
+import {announceForAccessibility} from '../lib/accessibility/announcer';
+import BlockAudioController from '../lib/block-audio/block-audio-controller';
+import blockAudioMessages from '../lib/block-audio/messages';
+import {formatMessage as formatBlockAudioMessage} from '../lib/block-audio/text';
 import log from '../lib/log.js';
 import Prompt from './prompt.jsx';
 import BlocksComponent from '../components/blocks/blocks.jsx';
@@ -20,6 +24,7 @@ import DropAreaHOC from '../lib/drop-area-hoc.jsx';
 import DragConstants from '../lib/drag-constants';
 import defineDynamicBlock from '../lib/define-dynamic-block';
 import {DEFAULT_MODE, getColorsForMode, colorModeMap} from '../lib/settings/color-mode';
+import {filterStarterProcedureDuplicates} from '../lib/starter-blocks';
 import {CAT_BLOCKS_THEME} from '../lib/settings/theme';
 import {
     injectExtensionBlockIcons,
@@ -65,6 +70,14 @@ class Blocks extends React.Component {
             'handleCategorySelected',
             'handleConnectionModalStart',
             'handleDrop',
+            'handleBlockCommandQueryChange',
+            'handleBlockCommandSearchKeyDown',
+            'handleBlockCommandSearchClose',
+            'handleBlockCommandSearchOpen',
+            'handleBlockCommandSelect',
+            'handleExplainSelectedBlock',
+            'handleHelpSelectedScript',
+            'handleGlobalKeyDown',
             'handleStatusButtonUpdate',
             'handleOpenSoundRecorder',
             'handlePromptStart',
@@ -93,6 +106,9 @@ class Blocks extends React.Component {
         this.ScratchBlocks.recordSoundCallback = this.handleOpenSoundRecorder;
 
         this.state = {
+            blockCommandItems: [],
+            blockCommandQuery: '',
+            blockCommandSearchOpen: false,
             prompt: null
         };
         this.onTargetsUpdate = debounce(this.onTargetsUpdate, 100);
@@ -129,7 +145,9 @@ class Blocks extends React.Component {
         );
         this.workspace.registerToolboxCategoryCallback(
             'PROCEDURE',
-            this.ScratchBlocks.ScratchProcedures.getProceduresCategory
+            workspace => filterStarterProcedureDuplicates(
+                this.ScratchBlocks.ScratchProcedures.getProceduresCategory(workspace)
+            )
         );
 
         this.toolboxUpdateChangeListener = event => {
@@ -188,10 +206,14 @@ class Blocks extends React.Component {
                 this.handleCategorySelected('faceSensing');
             });
         });
+        document.addEventListener('keydown', this.handleGlobalKeyDown, true);
     }
     shouldComponentUpdate (nextProps, nextState) {
         return (
             this.state.prompt !== nextState.prompt ||
+            this.state.blockCommandSearchOpen !== nextState.blockCommandSearchOpen ||
+            this.state.blockCommandQuery !== nextState.blockCommandQuery ||
+            this.state.blockCommandItems !== nextState.blockCommandItems ||
             this.props.isVisible !== nextProps.isVisible ||
             this._renderedToolboxXML !== nextProps.toolboxXML ||
             this.props.extensionLibraryVisible !== nextProps.extensionLibraryVisible ||
@@ -256,6 +278,7 @@ class Blocks extends React.Component {
         this.ScratchBlocks.getFocusManager().focusNode(this.workspace);
         this.workspace.dispose();
         clearTimeout(this.toolboxUpdateTimeout);
+        document.removeEventListener('keydown', this.handleGlobalKeyDown, true);
 
         // Clear the flyout blocks so that they can be recreated on mount.
         this.props.vm.clearFlyoutBlocks();
@@ -334,6 +357,14 @@ class Blocks extends React.Component {
             .getWorkspace();
         this.flyoutWorkspace.addChangeListener(this.props.vm.flyoutBlockListener);
         this.flyoutWorkspace.addChangeListener(this.props.vm.monitorBlockListener);
+        this.blockAudioController = new BlockAudioController({
+            ScratchBlocks: this.ScratchBlocks,
+            workspace: this.workspace,
+            rootElement: this.blocks,
+            getLocale: () => this.props.locale,
+            getMessages: () => this.props.messages,
+            getHoverDelay: () => this.props.blockAudioHoverDelayMs
+        });
         this.props.vm.addListener('SCRIPT_GLOW_ON', this.onScriptGlowOn);
         this.props.vm.addListener('SCRIPT_GLOW_OFF', this.onScriptGlowOff);
         this.props.vm.addListener('BLOCK_GLOW_ON', this.onBlockGlowOn);
@@ -348,6 +379,10 @@ class Blocks extends React.Component {
         this.props.vm.addListener('PERIPHERAL_DISCONNECTED', this.handleStatusButtonUpdate);
     }
     detachVM () {
+        if (this.blockAudioController) {
+            this.blockAudioController.dispose();
+            this.blockAudioController = null;
+        }
         this.props.vm.removeListener('SCRIPT_GLOW_ON', this.onScriptGlowOn);
         this.props.vm.removeListener('SCRIPT_GLOW_OFF', this.onScriptGlowOff);
         this.props.vm.removeListener('BLOCK_GLOW_ON', this.onBlockGlowOn);
@@ -667,6 +702,113 @@ class Blocks extends React.Component {
                 this.props.vm.refreshWorkspace();
             });
     }
+    handleExplainSelectedBlock () {
+        if (this.blockAudioController) {
+            this.blockAudioController.explainSelectedBlock();
+        }
+    }
+    handleGlobalKeyDown (event) {
+        if (!this.props.visionImpairedMode) return;
+        const key = (event.key || '').toLowerCase();
+        if ((event.ctrlKey || event.metaKey) && key === 'k') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.handleBlockCommandSearchOpen();
+        } else if (key === 'escape' && this.state.blockCommandSearchOpen) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.handleBlockCommandSearchClose();
+        } else if (event.altKey && this.blockAudioController) {
+            const commandByKey = {
+                arrowdown: 'next',
+                arrowup: 'previous',
+                arrowleft: 'parent',
+                arrowright: 'child',
+                pagedown: 'next-stack',
+                home: 'root'
+            };
+            const command = commandByKey[key];
+            if (command) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.blockAudioController.navigateScript(command);
+            }
+        }
+    }
+    handleBlockCommandSearchKeyDown (event) {
+        if ((event.key || '').toLowerCase() === 'escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.handleBlockCommandSearchClose();
+        }
+    }
+    handleBlockCommandSearchOpen () {
+        if (!this.blockAudioController) return;
+        if (this.state.blockCommandSearchOpen) return;
+        this._blockCommandTriggerElement = document.activeElement;
+        const blockCommandItems = this.blockAudioController.getCommandPaletteItems('');
+        this.setState({
+            blockCommandItems,
+            blockCommandQuery: '',
+            blockCommandSearchOpen: true
+        });
+        announceForAccessibility(formatBlockAudioMessage(
+            blockAudioMessages.blockSearchOpened,
+            this.props.locale,
+            this.props.messages
+        ));
+    }
+    handleBlockCommandSearchClose (event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        this.setState({
+            blockCommandSearchOpen: false
+        });
+        requestAnimationFrame(() => {
+            if (this._blockCommandTriggerElement && this._blockCommandTriggerElement.isConnected) {
+                this._blockCommandTriggerElement.focus();
+            }
+        });
+        announceForAccessibility(formatBlockAudioMessage(
+            blockAudioMessages.blockSearchClosed,
+            this.props.locale,
+            this.props.messages
+        ));
+    }
+    handleBlockCommandQueryChange (event) {
+        const blockCommandQuery = event.target.value;
+        const blockCommandItems = this.blockAudioController ?
+            this.blockAudioController.getCommandPaletteItems(blockCommandQuery) :
+            [];
+        this.setState({
+            blockCommandItems,
+            blockCommandQuery
+        });
+        announceForAccessibility(`${blockCommandItems.length} ${formatBlockAudioMessage(
+            blockAudioMessages.blockSearchMatching,
+            this.props.locale,
+            this.props.messages
+        )}`);
+    }
+    handleBlockCommandSelect (event) {
+        const {commandAction, commandId} = event.currentTarget.dataset;
+        if (this.blockAudioController && this.blockAudioController.runCommandPaletteItem({
+            action: commandAction,
+            id: commandId
+        })) {
+            this.setState({
+                blockCommandSearchOpen: false
+            });
+            this._blockCommandTriggerElement = null;
+        }
+    }
+    handleHelpSelectedScript () {
+        if (this.blockAudioController) {
+            this.blockAudioController.helpSelectedScript();
+        }
+    }
     render () {
          
         const {
@@ -693,11 +835,57 @@ class Blocks extends React.Component {
             colorMode,
             ...props
         } = this.props;
+        const explainButtonLabel = formatBlockAudioMessage(
+            blockAudioMessages.explainButtonLabel,
+            this.props.locale,
+            this.props.messages
+        );
+        const helpButtonLabel = formatBlockAudioMessage(
+            blockAudioMessages.helpButtonLabel,
+            this.props.locale,
+            this.props.messages
+        );
+        const blockSearchButtonLabel = formatBlockAudioMessage(
+            blockAudioMessages.blockSearchButtonLabel,
+            this.props.locale,
+            this.props.messages
+        );
+        const blockSearchLabel = formatBlockAudioMessage(
+            blockAudioMessages.blockSearchLabel,
+            this.props.locale,
+            this.props.messages
+        );
+        const blockSearchCloseLabel = formatBlockAudioMessage(
+            blockAudioMessages.blockSearchCloseLabel,
+            this.props.locale,
+            this.props.messages
+        );
+        const blockSearchEmptyLabel = formatBlockAudioMessage(
+            blockAudioMessages.blockSearchEmptyLabel,
+            this.props.locale,
+            this.props.messages
+        );
          
         return (
             <React.Fragment>
                 <DroppableBlocks
+                    blockCommandItems={this.state.blockCommandItems}
+                    blockCommandQuery={this.state.blockCommandQuery}
+                    blockCommandSearchOpen={this.state.blockCommandSearchOpen}
+                    blockSearchButtonLabel={blockSearchButtonLabel}
+                    blockSearchCloseLabel={blockSearchCloseLabel}
+                    blockSearchEmptyLabel={blockSearchEmptyLabel}
+                    blockSearchLabel={blockSearchLabel}
                     componentRef={this.setBlocks}
+                    explainButtonLabel={explainButtonLabel}
+                    helpButtonLabel={helpButtonLabel}
+                    onBlockCommandQueryChange={this.handleBlockCommandQueryChange}
+                    onBlockCommandSearchKeyDown={this.handleBlockCommandSearchKeyDown}
+                    onBlockCommandSearchClose={this.handleBlockCommandSearchClose}
+                    onBlockCommandSearchOpen={this.handleBlockCommandSearchOpen}
+                    onBlockCommandSelect={this.handleBlockCommandSelect}
+                    onExplainSelectedBlock={this.handleExplainSelectedBlock}
+                    onHelpSelectedScript={this.handleHelpSelectedScript}
                     onDrop={this.handleDrop}
                     {...props}
                 />
@@ -738,6 +926,8 @@ class Blocks extends React.Component {
 
 Blocks.propTypes = {
     anyModalVisible: PropTypes.bool,
+    blockAudioHoverDelayMs: PropTypes.number,
+    blockSize: PropTypes.string,
     canUseCloud: PropTypes.bool,
     customProceduresVisible: PropTypes.bool,
     extensionLibraryVisible: PropTypes.bool,
@@ -767,6 +957,7 @@ Blocks.propTypes = {
     updateMetrics: PropTypes.func,
     updateToolboxState: PropTypes.func,
     useCatBlocks: PropTypes.bool,
+    visionImpairedMode: PropTypes.bool,
     vm: PropTypes.instanceOf(VM).isRequired,
     workspaceMetrics: PropTypes.shape({
         targets: PropTypes.objectOf(PropTypes.object)

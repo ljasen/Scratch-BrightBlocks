@@ -3,7 +3,16 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
+    "baseUrl": ".",
     "module": "esnext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "paths": {
+      "@scratch/scratch-paint": ["../scratch-paint/src/index.js"],
+      "@scratch/scratch-render": ["../scratch-render/src/index.js"],
+      "@scratch/scratch-storage": ["../scratch-storage/src/index.js"],
+      "@scratch/scratch-svg-renderer": ["../scratch-svg-renderer/src/index.js"],
+      "@scratch/scratch-vm": ["../scratch-vm/src/index.js"],
+      "@scratch/scratch-vm/*": ["../scratch-vm/*"]
+    }
   }
 }

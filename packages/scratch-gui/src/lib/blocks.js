@@ -1,3 +1,6 @@
+import {STARTER_BLOCKS} from './starter-blocks';
+import {SPECIALISED_BLOCKS} from './specialised-blocks';
+
 /**
  * Connect scratch blocks with the vm
  * @param {VirtualMachine} vm - The scratch vm
@@ -130,6 +133,71 @@ export default function (vm) {
         const myself = ScratchBlocks.ScratchMsgs.translate('CONTROL_CREATECLONEOF_MYSELF', 'myself');
         return [[myself, '_myself_']].concat(spriteMenu());
     };
+
+    const moveTargetBySteps = function (target, steps) {
+        const radians = (90 - target.direction) * (Math.PI / 180);
+        target.setXY(
+            target.x + (steps * Math.cos(radians)),
+            target.y + (steps * Math.sin(radians))
+        );
+    };
+
+    const starterPrimitives = {
+        starter_jump: (args, util) => {
+            util.target.setXY(util.target.x, util.target.y + 50);
+        },
+        starter_walk: (args, util) => {
+            moveTargetBySteps(util.target, Number(args.STEPS) || 0);
+        },
+        starter_playanimation: (args, util) => {
+            util.target.setCostume(util.target.currentCostume + 1);
+        },
+        starter_saymessage: (args, util) => {
+            vm.runtime.emit('SAY_OR_THINK', util.target, 'say', String(args.MESSAGE || ''));
+        },
+        starter_takedamage: (args, util) => {
+            util.target.setSize(Math.max(10, util.target.size - 10));
+        },
+        starter_resetcharacter: (args, util) => {
+            util.target.setXY(0, 0);
+            util.target.setDirection(90);
+            util.target.setSize(100);
+            util.target.setVisible(true);
+            util.target.setCostume(0);
+        },
+        starter_spawnobject: (args, util) => {
+            util.target.makeClone();
+        },
+        starter_drawshape: () => {},
+        starter_startlevel: () => {},
+        starter_checkgameover: () => {}
+    };
+
+    const makeTeachingBlockJson = block => {
+        const args = (block.inputs || []).map(input => ({
+            type: 'input_value',
+            name: input.name
+        }));
+        return {
+            type: block.opcode,
+            message0: block.label,
+            args0: args,
+            inputsInline: true,
+            previousStatement: null,
+            nextStatement: null,
+            extensions: ['colours_more']
+        };
+    };
+
+    const starterBlockJson = STARTER_BLOCKS.map(makeTeachingBlockJson);
+    const specialisedBlockJson = SPECIALISED_BLOCKS.map(makeTeachingBlockJson);
+    ScratchBlocks.defineBlocksWithJsonArray(starterBlockJson.concat(specialisedBlockJson));
+    STARTER_BLOCKS.forEach(block => {
+        vm.runtime._primitives[block.opcode] = starterPrimitives[block.opcode] || (() => {});
+    });
+    SPECIALISED_BLOCKS.forEach(block => {
+        vm.runtime._primitives[block.opcode] = () => {};
+    });
 
     ScratchBlocks.Blocks.sound_sounds_menu.init = function () {
         const json = jsonForMenuBlock('SOUND_MENU', soundsMenu, 'sounds', []);

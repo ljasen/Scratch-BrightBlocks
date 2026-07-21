@@ -14,7 +14,24 @@ import {DEFAULT_MODE, HIGH_CONTRAST_MODE, colorModeMap} from '../../lib/settings
 import {themeMap} from '../../lib/settings/theme/index.js';
 import {persistColorMode} from '../../lib/settings/color-mode/persistence.js';
 import {persistTheme} from '../../lib/settings/theme/persistence.js';
-import {setColorMode, setTheme} from '../../reducers/settings.js';
+import {
+    persistBlockAudioHoverDelay,
+    persistBlockSize,
+    persistVisionImpairedMode
+} from '../../lib/settings/accessibility/persistence.js';
+import {
+    BLOCK_AUDIO_HOVER_DELAY_LONG,
+    BLOCK_AUDIO_HOVER_DELAY_MEDIUM,
+    BLOCK_AUDIO_HOVER_DELAY_SHORT,
+    BLOCK_SIZE_EXTRA_LARGE,
+    BLOCK_SIZE_LARGE,
+    BLOCK_SIZE_NORMAL,
+    setBlockAudioHoverDelay,
+    setBlockSize,
+    setColorMode,
+    setTheme,
+    setVisionImpairedMode
+} from '../../reducers/settings.js';
 
 import menuBarStyles from './menu-bar.css';
 import styles from './settings-menu.css';
@@ -31,6 +48,71 @@ const settingsMenuAriaMessage = defineMessage({
 
 const enabledColorModes = [DEFAULT_MODE, HIGH_CONTRAST_MODE];
 
+const blockSizeMap = {
+    [BLOCK_SIZE_NORMAL]: {
+        label: {
+            id: 'gui.menuBar.blockSize.normal',
+            defaultMessage: 'Normal',
+            description: 'Normal block size setting'
+        }
+    },
+    [BLOCK_SIZE_LARGE]: {
+        label: {
+            id: 'gui.menuBar.blockSize.large',
+            defaultMessage: 'Large',
+            description: 'Large block size setting'
+        }
+    },
+    [BLOCK_SIZE_EXTRA_LARGE]: {
+        label: {
+            id: 'gui.menuBar.blockSize.extraLarge',
+            defaultMessage: 'Extra Large',
+            description: 'Extra large block size setting'
+        }
+    }
+};
+
+const hoverDelayMap = {
+    [BLOCK_AUDIO_HOVER_DELAY_SHORT]: {
+        label: {
+            id: 'gui.menuBar.hoverAudioDelay.short',
+            defaultMessage: 'Short',
+            description: 'Short hover audio delay setting'
+        }
+    },
+    [BLOCK_AUDIO_HOVER_DELAY_MEDIUM]: {
+        label: {
+            id: 'gui.menuBar.hoverAudioDelay.medium',
+            defaultMessage: 'Medium',
+            description: 'Medium hover audio delay setting'
+        }
+    },
+    [BLOCK_AUDIO_HOVER_DELAY_LONG]: {
+        label: {
+            id: 'gui.menuBar.hoverAudioDelay.long',
+            defaultMessage: 'Long',
+            description: 'Long hover audio delay setting'
+        }
+    }
+};
+
+const visionImpairedModeMap = {
+    off: {
+        label: {
+            id: 'gui.menuBar.visionImpairedMode.off',
+            defaultMessage: 'Off',
+            description: 'Off option for vision impaired mode'
+        }
+    },
+    on: {
+        label: {
+            id: 'gui.menuBar.visionImpairedMode.on',
+            defaultMessage: 'On',
+            description: 'On option for vision impaired mode'
+        }
+    }
+};
+
 const SettingsMenu = ({
     canChangeLanguage,
     canChangeColorMode,
@@ -38,7 +120,13 @@ const SettingsMenu = ({
     hasActiveMembership,
     isRtl,
     activeColorMode,
+    activeBlockAudioHoverDelay,
+    activeBlockSize,
+    activeVisionImpairedMode,
     onChangeColorMode,
+    onChangeBlockAudioHoverDelay,
+    onChangeBlockSize,
+    onChangeVisionImpairedMode,
     activeTheme,
     onChangeTheme,
     depth
@@ -71,15 +159,18 @@ const SettingsMenu = ({
         isRtl
     });
 
-    return (<button
+    return (<div
         className={classNames(menuBarStyles.menuBarItem, menuBarStyles.hoverable, menuBarStyles.themeMenu, {
             [menuBarStyles.active]: isExpanded()
         })}
         aria-expanded={isExpanded()}
+        aria-haspopup="menu"
         aria-label={intl.formatMessage(settingsMenuAriaMessage)}
         onClick={handleOnOpen}
         onKeyDown={handleKeyDown}
         ref={menuRef}
+        role="button"
+        tabIndex={0}
     >
         <img src={settingsIcon} />
         <span className={styles.dropdownLabel}>
@@ -126,9 +217,45 @@ const SettingsMenu = ({
                     isRtl={isRtl}
                     depth={depth + 1}
                 />}
+                <PreferenceMenu
+                    itemsMap={visionImpairedModeMap}
+                    onChange={onChangeVisionImpairedMode}
+                    submenuLabel={{
+                        defaultMessage: 'Vision Impaired Mode',
+                        description: 'Vision impaired mode sub-menu',
+                        id: 'gui.menuBar.visionImpairedMode'
+                    }}
+                    selectedItemKey={activeVisionImpairedMode ? 'on' : 'off'}
+                    isRtl={isRtl}
+                    depth={depth + 1}
+                />
+                <PreferenceMenu
+                    itemsMap={blockSizeMap}
+                    onChange={onChangeBlockSize}
+                    submenuLabel={{
+                        defaultMessage: 'Block Size',
+                        description: 'Block size sub-menu',
+                        id: 'gui.menuBar.blockSize'
+                    }}
+                    selectedItemKey={activeBlockSize}
+                    isRtl={isRtl}
+                    depth={depth + 1}
+                />
+                <PreferenceMenu
+                    itemsMap={hoverDelayMap}
+                    onChange={onChangeBlockAudioHoverDelay}
+                    submenuLabel={{
+                        defaultMessage: 'Hover Audio Delay',
+                        description: 'Hover audio delay sub-menu',
+                        id: 'gui.menuBar.hoverAudioDelay'
+                    }}
+                    selectedItemKey={activeBlockAudioHoverDelay}
+                    isRtl={isRtl}
+                    depth={depth + 1}
+                />
             </MenuSection>
         </MenuBarMenu>
-    </button>);
+    </div>);
 };
 
 SettingsMenu.propTypes = {
@@ -137,20 +264,42 @@ SettingsMenu.propTypes = {
     canChangeTheme: PropTypes.bool,
     hasActiveMembership: PropTypes.bool,
     isRtl: PropTypes.bool,
+    activeBlockAudioHoverDelay: PropTypes.string,
+    activeBlockSize: PropTypes.string,
     activeColorMode: PropTypes.string,
+    activeVisionImpairedMode: PropTypes.bool,
+    onChangeBlockAudioHoverDelay: PropTypes.func,
+    onChangeBlockSize: PropTypes.func,
     onChangeColorMode: PropTypes.func,
+    onChangeVisionImpairedMode: PropTypes.func,
     activeTheme: PropTypes.string,
     onChangeTheme: PropTypes.func,
     depth: PropTypes.number
 };
 
 const mapStateToProps = state => ({
+    activeBlockAudioHoverDelay: state.scratchGui.settings.blockAudioHoverDelay,
+    activeBlockSize: state.scratchGui.settings.blockSize,
     activeColorMode: state.scratchGui.settings.colorMode,
+    activeVisionImpairedMode: state.scratchGui.settings.visionImpairedMode,
     activeTheme: state.scratchGui.settings.theme,
     isRtl: state.locales.isRtl
 });
 
 const mapDispatchToProps = dispatch => ({
+    onChangeBlockAudioHoverDelay: delay => {
+        dispatch(setBlockAudioHoverDelay(delay));
+        persistBlockAudioHoverDelay(delay);
+    },
+    onChangeBlockSize: blockSize => {
+        dispatch(setBlockSize(blockSize));
+        persistBlockSize(blockSize);
+    },
+    onChangeVisionImpairedMode: mode => {
+        const enabled = mode === 'on';
+        dispatch(setVisionImpairedMode(enabled));
+        persistVisionImpairedMode(enabled);
+    },
     onChangeColorMode: colorMode => {
         dispatch(setColorMode(colorMode));
         persistColorMode(colorMode);

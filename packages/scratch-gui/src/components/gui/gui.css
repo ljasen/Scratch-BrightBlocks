@@ -6,6 +6,119 @@
     height: 100%;
 }
 
+.welcome-screen {
+    position: fixed;
+    inset: 0;
+    z-index: $z-index-loader;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 3rem 1.5rem;
+    overflow: hidden;
+    background: $ui-white;
+    color: $ui-black;
+}
+
+.welcome-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("./welcome-background.png");
+    background-position: center right;
+    background-size: cover;
+    filter: saturate(1.04);
+    opacity: 0.92;
+}
+
+.welcome-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.74) 42%,
+            rgba(255, 255, 255, 0.2) 72%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(76, 151, 255, 0.1));
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 54rem;
+}
+
+.welcome-title {
+    margin: 0 0 1.25rem;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 4rem;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.welcome-description {
+    max-width: 48rem;
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.5rem;
+    line-height: 1.45;
+    font-weight: 500;
+}
+
+.welcome-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.welcome-primary-button,
+.welcome-secondary-button {
+    min-height: 3.5rem;
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    padding: 0.9rem 1.4rem;
+    border: 0.125rem solid $ui-black;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.welcome-primary-button {
+    background: $motion-primary;
+    color: $ui-white;
+}
+
+.welcome-secondary-button {
+    background: $sound-primary;
+    color: $ui-white;
+}
+
+.welcome-primary-button:hover,
+.welcome-secondary-button:hover {
+    filter: brightness(0.95);
+}
+
+.welcome-primary-button:focus-visible,
+.welcome-secondary-button:focus-visible {
+    outline: 0.25rem solid $ui-black;
+    outline-offset: 0.25rem;
+}
+
+.vision-impaired-mode :global(*:focus-visible) {
+    outline: 3px solid $ui-black;
+    outline-offset: 3px;
+}
+
+.vision-impaired-mode {
+    font-size: 1.05rem;
+}
+
 .body-wrapper {
     height: calc(100% - $menu-bar-height);
     background-color: $ui-primary;

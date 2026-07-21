@@ -1,3 +1,70 @@
+## BrightBlocks is an accessible, AI-assisted version of Scratch designed for children who are blind, visually impaired, unable to read, or need alternative ways to learn programming. It identifies and explains coding blocks through speech, helps users understand complete scripts, supports keyboard-based navigation, and provides audio feedback when help is needed. Its goal is to make block-based programming easier to understand, navigate, and create for every learner.
+
+## PS: I also added a set of custom blocks especially useful to make audiospacial games.
+
+## How I Used Codex and GPT-5.6
+
+### Codex
+
+Codex was used during development to:
+
+- Navigate and understand the Scratch editor codebase.
+- Identify the components responsible for rendering and interacting with blocks.
+- Implement audio feedback when users select or hover over Scratch blocks.
+- Add category icons and accessibility-related interface changes.
+- Debug integration issues in the customized Scratch editor.
+- Assist with code refactoring and documentation.
+
+All generated code was reviewed, tested and adapted before being included in the project.
+
+### GPT-5.6
+
+GPT-5.6 powers the project's AI explanation functionality. It receives
+structured information about selected Scratch blocks and produces
+age-appropriate explanations of what the code does.
+
+It is used to:
+
+- Explain individual Scratch blocks in simple language.
+- Explain sequences of connected blocks.
+- Produce explanations suitable for audio playback.
+- Help users understand errors or unexpected program behaviour.
+
+API requests are sent through the project's backend so that the OpenAI API key
+is never exposed in the browser.
+
+AI Request Flow
+1. The child selects a Scratch block or connected group of blocks.
+2. The child clicks the help button.
+3. The application extracts structured information about the selected code.
+4. The backend combines that information with fixed safety and explanation instructions.
+5. GPT gives helpful tips to the child trying to make the function work.
+6. The explanation is read aloud.
+
+In case child did not find a solution on its own:
+7. Child pressed on help button again.
+8. GPT generates a clear explanation limited to the selected Scratch code.
+
+No free-text prompt field is available to the child.
+
+## Example AI Workflow
+
+
+User selects Scratch blocks
+        ↓
+The project extracts block information
+        ↓
+The backend sends structured context to GPT-5.6
+        ↓
+GPT-5.6 generates a child-friendly explanation
+        ↓
+The explanation is displayed and read aloud
+
+## Whats next?
+
+I will finish the complete keyboard controls integration, then train a specialised agent for the purpose of helping children in Brightblocks. That way it will be much better at its jobs.
+****************************************************
+
 # scratch-editor: The Scratch Editor Monorepo
 
 If you'd like to use Scratch, please visit the [Scratch website](https://scratch.mit.edu/). You can build your own

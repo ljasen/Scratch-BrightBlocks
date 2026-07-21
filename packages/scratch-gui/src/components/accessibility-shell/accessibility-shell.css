@@ -1,0 +1,67 @@
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.skip-links {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: $z-index-modal;
+}
+
+.skip-links a {
+    position: absolute;
+    transform: translateY(-150%);
+    padding: 0.5rem 0.75rem;
+    border: 2px solid $ui-black;
+    border-radius: 0.25rem;
+    background: $ui-white;
+    color: $text-primary;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.skip-links a:focus {
+    transform: translateY(0.5rem);
+}
+
+.live-announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.shortcuts {
+    position: absolute;
+    right: 1rem;
+    top: 3.25rem;
+    z-index: $z-index-menu-bar;
+    max-width: 18rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: $ui-white;
+    color: $text-primary;
+    box-shadow: 0 2px 8px $ui-black-transparent;
+    font-size: 0.8rem;
+}
+
+.shortcuts summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.shortcuts ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1rem;
+}
+
+[dir="rtl"] .shortcuts {
+    right: auto;
+    left: 1rem;
+}
